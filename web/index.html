@@ -27,7 +27,7 @@
   --shadow:0 8px 30px rgba(0,0,0,.45); color-scheme:dark }
 
 /* mapa corporal */
-.bodymap{width:100%;max-width:440px;margin:0 auto}
+.bodymap{width:100%;max-width:560px;margin:0 auto;background:#fff;border-radius:14px;padding:6px 0}
 .bodymap svg{width:100%;height:auto;display:block}
 .body-seg{align-self:center}
 .alerts{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
@@ -35,7 +35,7 @@
 .al.gain{background:var(--gain)} .al.loss{background:var(--loss)}
 .bodymap .pulse{transform-box:fill-box;transform-origin:center;animation:ring 1.8s ease-out infinite}
 @keyframes ring{from{transform:scale(.7);opacity:.9}to{transform:scale(2.4);opacity:0}}
-.bodymap .m.gain,.bodymap .m.loss{animation:glow 2.4s ease-in-out infinite}
+.bodymap .hl{animation:glow 2.4s ease-in-out infinite}
 @keyframes glow{0%,100%{opacity:1}50%{opacity:.7}}
 .role-chip{font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--sunk);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .role-chip.personal{background:var(--ink);color:var(--bg)}
@@ -840,42 +840,41 @@ const BACK=[
  ['pant','Panturrilha','M66 338 C62 352 62 368 66 380 C70 386 76 384 78 378 C80 364 80 350 78 340 C74 332 68 332 66 338 Z'],
  ['pant','Panturrilha','M80.5 340 C84.5 350 86.5 364 84.5 378 C88.5 372 88.5 354 86.5 344 C84.5 338 81.5 336 80.5 340 Z']
 ];
-const ANCH={
- front:[['ombro','Ombros','L',54,104],['braco','Braço','L',51,146],['coxa','Coxa','L',76,278],['peito','Peito','R',118,106],['cintura','Cintura','R',108,170],['antebraco','Antebraço','R',160,194],['pant','Panturrilha','R',129,366]],
- back:[['ombro','Ombros','L',54,108],['braco','Braço','L',51,146],['quadril','Glúteos','L',80,238],['pant','Panturrilha','L',72,360],['peito','Tórax','R',124,150],['cintura','Cintura','R',104,192],['antebraco','Antebraço','R',160,196],['coxa','Coxa','R',122,292]]};
+/* mapa do corpo: ilustração anatômica com regiões recortadas (corpo/) */
+const CW=564,CH=942,PADX=180;
+const BODY_ANCH={"f": {"ombro": [[165, 124], [399, 124]], "peito": [[234, 138], [329, 138]], "braco": [[154, 202], [409, 202]], "antebraco": [[112, 312], [451, 311]], "cintura": [[241, 273], [322, 273]], "coxa": [[222, 480], [341, 479]], "pant": [[210, 725], [353, 726]]}, "b": {"ombro": [[161, 127], [400, 127]], "peito": [[231, 188], [330, 188]], "braco": [[154, 202], [409, 202]], "antebraco": [[109, 316], [453, 316]], "cintura": [[249, 297], [313, 299]], "quadril": [[235, 412], [326, 412]], "coxa": [[224, 537], [337, 537]], "pant": [[213, 724], [348, 726]]}};
+const BODY_REG={f:[['ombro','Ombros','L'],['braco','Braço','L'],['coxa','Coxa','L'],['peito','Peito','R'],['cintura','Cintura','R'],['antebraco','Antebraço','R'],['pant','Panturrilha','R']],
+ b:[['ombro','Ombros','L'],['braco','Tríceps','L'],['quadril','Glúteos','L'],['pant','Panturrilha','L'],['peito','Costas','R'],['cintura','Lombar','R'],['antebraco','Antebraço','R'],['coxa','Posterior','R']]};
 let bodySide='frente';
-function bodyCallouts(back,C){
-  const OX=80,BW=76,BH=32,U={};MEDS.forEach(([k,,u])=>U[k]=u);
-  const items=ANCH[back?'back':'front'].filter(([k])=>C[k]&&(C[k].st==='gain'||C[k].st==='loss'));
+function bodyCallouts(v,C){
+  const BW=170,BH=64,U={};MEDS.forEach(([k,,u])=>U[k]=u);
+  const items=BODY_REG[v].filter(([k])=>C[k]&&(C[k].st==='gain'||C[k].st==='loss')&&BODY_ANCH[v][k]);
   let out='';
   ['L','R'].forEach(side=>{
     let prev=-1e9;
-    items.filter(a=>a[2]===side).sort((a,b)=>a[4]-b[4]).forEach(([k,lab,,ax,ay])=>{
-      let y=Math.max(ay,prev+BH+5);y=Math.min(y,436-BH/2);prev=y;
-      const c=C[k],col=c.st==='gain'?'var(--gain)':'var(--loss)',bx=side==='L'?2:282,ex=side==='L'?bx+BW:bx,px=ax+OX;
+    items.filter(a=>a[2]===side).map(([k,lab])=>{const an=BODY_ANCH[v][k][side==='L'?0:1];return [k,lab,an[0]+PADX,an[1]]})
+      .sort((a,b)=>a[3]-b[3]).forEach(([k,lab,ax,ay])=>{
+      let y=Math.max(ay,prev+BH+10);y=Math.min(y,CH-BH/2-4);prev=y;
+      const c=C[k],col=c.st==='gain'?'#1E78E6':'#E0352B',bx=side==='L'?4:PADX+CW+6,ex=side==='L'?bx+BW:bx;
       const val=`${c.diff>0?'+':'−'}${fmtN(Math.abs(c.diff))} ${U[k]}`;
-      out+=`<g><line x1="${ex}" y1="${y}" x2="${px}" y2="${ay}" stroke="${col}" stroke-width="1.5"/>
-        <circle class="pulse" cx="${px}" cy="${ay}" r="5" fill="none" stroke="${col}" stroke-width="2"/>
-        <circle cx="${px}" cy="${ay}" r="3.6" fill="${col}" stroke="var(--surface)" stroke-width="1.5"/>
-        <rect x="${bx}" y="${y-BH/2}" width="${BW}" height="${BH}" rx="8" fill="${col}"/>
-        <text x="${bx+8}" y="${y-3}" font-size="9.5" font-weight="700" fill="#fff" opacity=".9">${c.st==='gain'?'▲':'▼'} ${lab}</text>
-        <text x="${bx+8}" y="${y+11}" font-size="12" font-weight="800" fill="#fff">${val}</text></g>`;
+      out+=`<g><line x1="${ex}" y1="${y}" x2="${ax}" y2="${ay}" stroke="${col}" stroke-width="3"/>
+        <circle class="pulse" cx="${ax}" cy="${ay}" r="11" fill="none" stroke="${col}" stroke-width="4"/>
+        <circle cx="${ax}" cy="${ay}" r="8" fill="${col}" stroke="#fff" stroke-width="3"/>
+        <rect x="${bx}" y="${y-BH/2}" width="${BW}" height="${BH}" rx="14" fill="${col}"/>
+        <text x="${bx+14}" y="${y-6}" font-size="21" font-weight="700" fill="#fff" opacity=".92">${c.st==='gain'?'▲':'▼'} ${lab}</text>
+        <text x="${bx+14}" y="${y+22}" font-size="27" font-weight="800" fill="#fff">${val}</text></g>`;
     });
   });
   return out;
 }
 function bodySVG(back,st,C){
-  const half=(back?BACK:FRONT).map(([k,t,d])=>{const s=k&&st[k];return `<path class="m${s==='gain'||s==='loss'?' '+s:''}" d="${d}"><title>${t}</title></path>`}).join('');
-  const M='matrix(-1 0 0 1 200 0)';
-  const outl=`<path d="${SIL}" fill="var(--body-out)" stroke="var(--body-line)" stroke-width="2.4" stroke-linejoin="round"/>`;
-  const fillOnly=`<path d="${SIL}" fill="var(--body-out)"/>`;
-  const mus=`<g fill="var(--body)" stroke="var(--body-sep)" stroke-width="1.1" stroke-linejoin="round">${half}</g>`;
-  const extra=back?`<path d="M100 64 V214" stroke="var(--body-sep)" stroke-width="1.4"/>`:`<path d="M93 64 L98 84 M107 64 L102 84" stroke="var(--body-line)" stroke-width="1.2" fill="none"/>`;
-  return `<svg viewBox="0 0 360 440" role="img" aria-label="Corpo visto de ${back?'costas':'frente'}"><g transform="translate(80 2)">
-    <ellipse cx="100" cy="36" rx="15.5" ry="21" fill="var(--body-out)" stroke="var(--body-line)" stroke-width="2.4"/>
-    ${outl}<g transform="${M}">${outl}</g>${fillOnly}<g transform="${M}">${fillOnly}</g>
-    <ellipse cx="100" cy="36" rx="15.5" ry="21" fill="var(--body-out)"/>
-    ${mus}<g transform="${M}">${mus}</g>${extra}</g>${C?bodyCallouts(back,C):''}</svg>`;
+  const v=back?'b':'f',W=CW+PADX*2;
+  const ch=BODY_REG[v].filter(([k])=>st[k]==='gain'||st[k]==='loss');
+  const defs=ch.map(([k])=>`<mask id="mk-${v}-${k}" maskUnits="userSpaceOnUse" x="${PADX}" y="0" width="${CW}" height="${CH}"><image href="corpo/${v}-m-${k}.png" x="${PADX}" y="0" width="${CW}" height="${CH}"/></mask>`).join('');
+  const lays=ch.map(([k,lab])=>`<image class="hl" href="corpo/${v}-${st[k]}.jpg" x="${PADX}" y="0" width="${CW}" height="${CH}" mask="url(#mk-${v}-${k})"><title>${lab}: ${st[k]==='gain'?'aumentou':'diminuiu'}</title></image>`).join('');
+  return `<svg viewBox="0 0 ${W} ${CH}" role="img" aria-label="Corpo visto de ${back?'costas':'frente'}"><defs>${defs}</defs>
+    <rect x="${PADX}" y="0" width="${CW}" height="${CH}" fill="#fff"/>
+    <image href="corpo/${v}-base.jpg" x="${PADX}" y="0" width="${CW}" height="${CH}"/>${lays}${C?bodyCallouts(v,C):''}</svg>`;
 }
 function bodySection(demo){
   const M=medidasOrd();
@@ -900,7 +899,7 @@ function bodySection(demo){
         <span class="al gain">▲ ${nG} medida${nG===1?'':'s'} cresceu${nG===1?'':'ram'}</span><span class="al loss">▼ ${nL} diminuiu${nL===1?'':'ram'}</span></div>`:''}
       <div class="seg body-seg" role="group" aria-label="Vista do corpo"><button data-act="bodySide" data-s="frente" aria-pressed="${bodySide==='frente'}">Frente</button><button data-act="bodySide" data-s="costas" aria-pressed="${bodySide==='costas'}">Costas</button></div>
       <div class="bodymap">${bodySVG(bodySide==='costas',st,tem2?C:null)}</div>
-      <div class="legend" style="justify-content:center"><span><i class="sw" style="background:var(--gain)"></i>Evolução (aumentou)</span><span><i class="sw" style="background:var(--loss)"></i>Perda (diminuiu)</span><span><i class="sw" style="background:var(--body)"></i>Sem mudança</span></div>
+      <div class="legend" style="justify-content:center"><span><i class="sw" style="background:var(--gain)"></i>Evolução (aumentou)</span><span><i class="sw" style="background:var(--loss)"></i>Perda (diminuiu)</span><span><i class="sw" style="background:#3F4E67"></i>Sem mudança</span></div>
       ${tem2?'':'<p class="small muted" style="text-align:center">Primeira avaliação salva. Na próxima, o corpo mostra os alertas de ganho e perda.</p>'}
       <div class="mlist">${rows}${compRows}</div>
       ${cb?'<p class="small muted">Massa magra e gorda são estimadas a partir do peso e do % de gordura.</p>':''}
